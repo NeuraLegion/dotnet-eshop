@@ -4,7 +4,11 @@ builder.AddServiceDefaults();
 builder.AddApplicationServices();
 builder.Services.AddProblemDetails();
 
-var withApiVersioning = builder.Services.AddApiVersioning();
+var withApiVersioning = builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new Asp.Versioning.ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+});
 
 builder.AddDefaultOpenApi(withApiVersioning);
 

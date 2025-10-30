@@ -36,7 +36,6 @@
             "name": "api-version",
             "in": "query",
             "description": "The API version, in the format 'major.minor'.",
-            "required": true,
             "schema": {
               "type": "string",
               "example": "1.0"
@@ -94,7 +93,6 @@
             "name": "api-version",
             "in": "query",
             "description": "The API version, in the format 'major.minor'.",
-            "required": true,
             "schema": {
               "type": "string",
               "example": "1.0"
@@ -150,7 +148,6 @@
             "name": "api-version",
             "in": "query",
             "description": "The API version, in the format 'major.minor'.",
-            "required": true,
             "schema": {
               "type": "string",
               "example": "1.0"
@@ -191,7 +188,6 @@
             "name": "api-version",
             "in": "query",
             "description": "The API version, in the format 'major.minor'.",
-            "required": true,
             "schema": {
               "type": "string",
               "example": "1.0"
@@ -283,7 +279,6 @@
             "name": "api-version",
             "in": "query",
             "description": "The API version, in the format 'major.minor'.",
-            "required": true,
             "schema": {
               "type": "string",
               "example": "1.0"
@@ -330,7 +325,6 @@
             "name": "api-version",
             "in": "query",
             "description": "The API version, in the format 'major.minor'.",
-            "required": true,
             "schema": {
               "type": "string",
               "example": "1.0"
@@ -377,7 +371,6 @@
             "name": "api-version",
             "in": "query",
             "description": "The API version, in the format 'major.minor'.",
-            "required": true,
             "schema": {
               "type": "string",
               "example": "1.0"
@@ -450,7 +443,6 @@
             "name": "api-version",
             "in": "query",
             "description": "The API version, in the format 'major.minor'.",
-            "required": true,
             "schema": {
               "type": "string",
               "example": "1.0"
@@ -492,7 +484,6 @@
             "name": "api-version",
             "in": "query",
             "description": "The API version, in the format 'major.minor'.",
-            "required": true,
             "schema": {
               "type": "string",
               "example": "1.0"
@@ -587,7 +578,6 @@
             "name": "api-version",
             "in": "query",
             "description": "The API version, in the format 'major.minor'.",
-            "required": true,
             "schema": {
               "type": "string",
               "example": "1.0"
@@ -669,7 +659,6 @@
             "name": "api-version",
             "in": "query",
             "description": "The API version, in the format 'major.minor'.",
-            "required": true,
             "schema": {
               "type": "string",
               "example": "1.0"
@@ -769,7 +758,6 @@
             "name": "api-version",
             "in": "query",
             "description": "The API version, in the format 'major.minor'.",
-            "required": true,
             "schema": {
               "type": "string",
               "example": "1.0"
@@ -855,7 +843,6 @@
             "name": "api-version",
             "in": "query",
             "description": "The API version, in the format 'major.minor'.",
-            "required": true,
             "schema": {
               "type": "string",
               "example": "1.0"
