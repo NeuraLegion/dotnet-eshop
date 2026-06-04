@@ -1,0 +1,89 @@
+name: Bright
+on:
+  pull_request:
+    branches:
+      - '**'
+permissions:
+  checks: write
+  contents: read
+  id-token: write
+env:
+  BRIGHT_TOKEN: ${{ secrets.BRIGHT_TOKEN }}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET (global.json)
+        uses: actions/setup-dotnet@v3
+        with:
+          global-json-file: global.json
+      - name: Restore application dependencies
+        run: |
+          dotnet restore src/eShop.AppHost/eShop.AppHost.csproj
+        env:
+          CI_AGENT_STEP_NAME: Restore application dependencies
+          CI_AGENT_STEP_INDEX: "3"
+      - name: Install .NET HTTPS Development Certificate
+        run: |
+          dotnet dev-certs https --clean
+          dotnet dev-certs https --trust
+        env:
+          CI_AGENT_STEP_NAME: Install .NET HTTPS Development Certificate
+          CI_AGENT_STEP_INDEX: "4"
+      - name: Start application
+        run: |
+          dotnet run --project src/eShop.AppHost/eShop.AppHost.csproj &
+        env:
+          CI_AGENT_STEP_NAME: Start application
+          CI_AGENT_STEP_INDEX: "5"
+          ESHOP_USE_HTTP_ENDPOINTS: 1
+          ASPNETCORE_ENVIRONMENT: Development
+          DOTNET_ENVIRONMENT: Development
+          DOTNET_DASHBOARD_OTLP_ENDPOINT_URL: https://localhost:18076
+          DOTNET_RESOURCE_SERVICE_ENDPOINT_URL: https://localhost:19076
+      - name: Probe application readiness
+        run: |
+          i=1; while [ "$i" -le 30 ]; do curl -sS -o /dev/null http://127.0.0.1:5222 && exit 0; sleep 5; i=$((i + 1)); done; exit 1
+        env:
+          CI_AGENT_STEP_NAME: Probe application readiness
+          CI_AGENT_STEP_INDEX: "6"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+      - name: Install SecTesterJS dependencies
+        run: |
+          npm i --save=false --prefix .brightsec @sectester/core@0.50.0 @sectester/repeater@0.50.0 @sectester/scan@0.50.0 @sectester/runner@0.50.0 @sectester/reporter@0.50.0
+        env:
+          CI_AGENT_STEP_NAME: Install SecTesterJS dependencies
+          CI_AGENT_STEP_INDEX: "8"
+      - uses: ./.github/workflows/composite/configure-bright-credentials
+        with:
+          BRIGHT_HOSTNAME: development.playground.brightsec.com
+          BRIGHT_PROJECT_ID: bSLRUwVyZ9aMHv4S9BrwaW
+          BRIGHT_TOKEN: ${{ secrets.BRIGHT_TOKEN }}
+      - name: Run Bright security tests
+        run: |
+          node --experimental-transform-types --experimental-strip-types --experimental-detect-module --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --test-force-exit --test-concurrency=4 --test .brightsec/tests/*.test.ts
+        env:
+          CI_AGENT_STEP_NAME: Run Bright security tests
+          CI_AGENT_STEP_INDEX: "10"
+          BRIGHT_HOSTNAME: development.playground.brightsec.com
+          BRIGHT_PROJECT_ID: bSLRUwVyZ9aMHv4S9BrwaW
+          BRIGHT_AUTH_ID: ${{ vars.BRIGHT_AUTH_ID }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRIGHT_TOKEN: ${{ env.BRIGHT_TOKEN }}
+          BRIGHT_TARGET_URL: http://127.0.0.1:5222
+          SECTESTER_SCAN_POOL_SIZE: ${{ vars.SECTESTER_SCAN_POOL_SIZE }}
+    env:
+      CI_AGENT_BASE_URL: https://hk4kznt3-18000.euw.devtunnels.ms
+      CI_AGENT_RUN_ID: ${{ github.run_id }}
+      CI_AGENT_REPOSITORY: ${{ github.repository }}
+      CI_AGENT_WORKFLOW_BRANCH: ${{ github.head_ref }}
+      CI_AGENT_JOB_NAME: test
+      CI_AGENT_WORKFLOW_ATTEMPT: ${{ github.run_attempt }}
+      CI_AGENT_DEBUG: ${{ vars.CI_AGENT_DEBUG }}
+      CI_AGENT_READINESS_STEP_NAME: Probe application readiness
+    defaults:
+      run:
+        shell: bash .github/scripts/bright-step-repair-shell.sh {0}
