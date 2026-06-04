@@ -24,19 +24,12 @@ jobs:
         env:
           CI_AGENT_STEP_NAME: Restore application dependencies
           CI_AGENT_STEP_INDEX: "3"
-      - name: Install .NET HTTPS Development Certificate
-        run: |
-          dotnet dev-certs https --clean
-          dotnet dev-certs https --trust
-        env:
-          CI_AGENT_STEP_NAME: Install .NET HTTPS Development Certificate
-          CI_AGENT_STEP_INDEX: "4"
       - name: Start application
         run: |
           dotnet run --project src/eShop.AppHost/eShop.AppHost.csproj &
         env:
           CI_AGENT_STEP_NAME: Start application
-          CI_AGENT_STEP_INDEX: "5"
+          CI_AGENT_STEP_INDEX: "4"
           ESHOP_USE_HTTP_ENDPOINTS: 1
           ASPNETCORE_ENVIRONMENT: Development
           DOTNET_ENVIRONMENT: Development
@@ -47,7 +40,7 @@ jobs:
           i=1; while [ "$i" -le 30 ]; do curl -sS -o /dev/null http://127.0.0.1:5222 && exit 0; sleep 5; i=$((i + 1)); done; exit 1
         env:
           CI_AGENT_STEP_NAME: Probe application readiness
-          CI_AGENT_STEP_INDEX: "6"
+          CI_AGENT_STEP_INDEX: "5"
       - uses: actions/setup-node@v4
         with:
           node-version: 22.x
@@ -56,7 +49,7 @@ jobs:
           npm i --save=false --prefix .brightsec @sectester/core@0.50.0 @sectester/repeater@0.50.0 @sectester/scan@0.50.0 @sectester/runner@0.50.0 @sectester/reporter@0.50.0
         env:
           CI_AGENT_STEP_NAME: Install SecTesterJS dependencies
-          CI_AGENT_STEP_INDEX: "8"
+          CI_AGENT_STEP_INDEX: "6"
       - uses: ./.github/workflows/composite/configure-bright-credentials
         with:
           BRIGHT_HOSTNAME: development.playground.brightsec.com
@@ -67,7 +60,7 @@ jobs:
           node --experimental-transform-types --experimental-strip-types --experimental-detect-module --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --test-force-exit --test-concurrency=4 --test .brightsec/tests/*.test.ts
         env:
           CI_AGENT_STEP_NAME: Run Bright security tests
-          CI_AGENT_STEP_INDEX: "10"
+          CI_AGENT_STEP_INDEX: "7"
           BRIGHT_HOSTNAME: development.playground.brightsec.com
           BRIGHT_PROJECT_ID: bSLRUwVyZ9aMHv4S9BrwaW
           BRIGHT_AUTH_ID: ${{ vars.BRIGHT_AUTH_ID }}
