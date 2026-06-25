@@ -1,0 +1,41 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0.100-rc.1
+
+WORKDIR /src
+
+ENV ASPNETCORE_ENVIRONMENT=Production \
+    DOTNET_ENVIRONMENT=Production \
+    NODE_ENV=production \
+    DOTNET_NOLOGO=1 \
+    DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    ASPNETCORE_URLS=http://+:8080 \
+    MAKEFLAGS="-j$(nproc)"
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY . .
+
+# Patch Docker-networked service names for production-like container execution
+RUN sed -i 's|amqp://localhost|amqp://eventbus|g' src/Webhooks.API/appsettings.json && \
+    sed -i 's|Host=localhost;Database=WebHooksDB;Username=postgres;Password=yourWeak(!)Password|Host=webhooksdb;Database=WebHooksDB;Username=postgres;Password=yourWeak(!)Password|g' src/Webhooks.API/appsettings.Development.json && \
+    sed -i 's|http://localhost:5223|http://identity:5223|g' src/Webhooks.API/appsettings.json
+
+# Restore/build with parallelism and publish the Webhooks API service only
+RUN dotnet restore src/Webhooks.API/Webhooks.API.csproj \
+    -p:ContinuousIntegrationBuild=true \
+    -p:UseAppHost=false && \
+    dotnet publish src/Webhooks.API/Webhooks.API.csproj \
+    -c Release \
+    -o /app/publish \
+    --no-restore \
+    -p:ContinuousIntegrationBuild=true \
+    -p:UseAppHost=false
+
+WORKDIR /app/publish
+
+EXPOSE 8080
+
+CMD ["dotnet", "Webhooks.API.dll"]

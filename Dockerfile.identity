@@ -1,0 +1,32 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0.100-rc.1
+
+WORKDIR /src
+
+ENV ASPNETCORE_ENVIRONMENT=Production \
+    DOTNET_ENVIRONMENT=Production \
+    DOTNET_NOLOGO=1 \
+    DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    ASPNETCORE_URLS=http://+:8080
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY . .
+
+RUN dotnet restore src/Identity.API/Identity.API.csproj \
+    -p:ContinuousIntegrationBuild=true \
+    -p:UseAppHost=false && \
+    dotnet publish src/Identity.API/Identity.API.csproj \
+    -c Release \
+    -o /app/publish \
+    --no-restore \
+    -p:ContinuousIntegrationBuild=true \
+    -p:UseAppHost=false
+
+WORKDIR /app/publish
+
+EXPOSE 8080
+
+CMD ["dotnet", "Identity.API.dll"]

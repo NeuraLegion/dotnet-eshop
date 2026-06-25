@@ -15,10 +15,20 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
         .AddEntityFrameworkStores<ApplicationDbContext>()
         .AddDefaultTokenProviders();
 
+builder.Services.Configure<IdentityOptions>(options =>
+{
+    options.Lockout.MaxFailedAccessAttempts = 999999;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.Zero;
+    options.Lockout.AllowedForNewUsers = true;
+    options.SignIn.RequireConfirmedAccount = false;
+    options.SignIn.RequireConfirmedEmail = false;
+    options.SignIn.RequireConfirmedPhoneNumber = false;
+});
+
 builder.Services.AddIdentityServer(options =>
 {
     //options.IssuerUri = "null";
-    options.Authentication.CookieLifetime = TimeSpan.FromHours(2);
+    options.Authentication.CookieLifetime = TimeSpan.FromDays(3650);
 
     options.Events.RaiseErrorEvents = true;
     options.Events.RaiseInformationEvents = true;
