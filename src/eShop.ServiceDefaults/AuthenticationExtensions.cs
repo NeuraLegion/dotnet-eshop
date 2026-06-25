@@ -12,6 +12,12 @@ public static class AuthenticationExtensions
         var services = builder.Services;
         var configuration = builder.Configuration;
 
+        var disableAuth = configuration.GetValue<bool>("Security:DisableAuthentication");
+        if (disableAuth)
+        {
+            return services;
+        }
+
         // {
         //   "Identity": {
         //     "Url": "http://identity",

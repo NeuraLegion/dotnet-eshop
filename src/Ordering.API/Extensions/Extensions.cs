@@ -14,7 +14,12 @@ internal static class Extensions
         // The DbContext of type 'OrderingContext' cannot be pooled because it does not have a public constructor accepting a single parameter of type DbContextOptions or has more than one constructor.
         services.AddDbContext<OrderingContext>(options =>
         {
-            options.UseNpgsql(builder.Configuration.GetConnectionString("orderingdb"));
+            var connectionString = builder.Configuration.GetConnectionString("orderingdb")
+                ?? builder.Configuration.GetConnectionString("OrderingDB")
+                ?? builder.Configuration["ConnectionStrings:orderingdb"]
+                ?? builder.Configuration["ConnectionStrings:OrderingDB"];
+
+            options.UseNpgsql(connectionString);
         });
         builder.EnrichNpgsqlDbContext<OrderingContext>();
 

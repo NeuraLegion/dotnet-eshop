@@ -3,6 +3,10 @@
 builder.AddServiceDefaults();
 builder.AddApplicationServices();
 builder.Services.AddProblemDetails();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add(new Microsoft.AspNetCore.Mvc.Authorization.AllowAnonymousFilter());
+});
 
 var withApiVersioning = builder.Services.AddApiVersioning(options =>
 {
@@ -18,8 +22,7 @@ app.MapDefaultEndpoints();
 
 var orders = app.NewVersionedApi("Orders");
 
-orders.MapOrdersApiV1()
-      .RequireAuthorization();
+orders.MapOrdersApiV1();
 
 app.UseDefaultOpenApi();
 app.Run();

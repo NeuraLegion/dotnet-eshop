@@ -1,0 +1,91 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0.100-rc.1 AS build
+
+WORKDIR /src
+
+# Install build dependencies for Ubuntu-based .NET SDK image
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        bash \
+        ca-certificates \
+        curl \
+        git \
+        libicu74 \
+        libkrb5-3 \
+        tzdata \
+        zlib1g \
+    && update-ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV \
+    ASPNETCORE_ENVIRONMENT=Production \
+    DOTNET_ENVIRONMENT=Production \
+    DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    DOTNET_NOLOGO=1 \
+    NUGET_XMLDOC_MODE=skip \
+    COMPlus_EnableDiagnostics=0 \
+    ASPNETCORE_URLS=http://+:8080 \
+    MAKEFLAGS=-j$(nproc)
+
+# Copy project files first for better layer caching
+COPY global.json Directory.Build.props Directory.Build.targets Directory.Packages.props nuget.config ./
+COPY src/Ordering.API/Ordering.API.csproj src/Ordering.API/
+COPY src/EventBusRabbitMQ/EventBusRabbitMQ.csproj src/EventBusRabbitMQ/
+COPY src/IntegrationEventLogEF/IntegrationEventLogEF.csproj src/IntegrationEventLogEF/
+COPY src/eShop.ServiceDefaults/eShop.ServiceDefaults.csproj src/eShop.ServiceDefaults/
+COPY src/Ordering.Domain/Ordering.Domain.csproj src/Ordering.Domain/
+COPY src/Ordering.Infrastructure/Ordering.Infrastructure.csproj src/Ordering.Infrastructure/
+
+# Restore using the repository source
+RUN dotnet restore src/Ordering.API/Ordering.API.csproj
+
+# Copy the rest of the source
+COPY . .
+
+# Patch Docker/runtime networking config for companion services
+RUN set -eux; \
+    if grep -q '"EventBus": "amqp://localhost"' src/Ordering.API/appsettings.json; then \
+        sed -i 's|"EventBus": "amqp://localhost"|"EventBus": "amqp://guest:guest@eventbus:5672/"|g' src/Ordering.API/appsettings.json; \
+    fi; \
+    if grep -q 'Host=localhost;Database=OrderingDB;Username=postgres;Password=yourWeak(!)Password' src/Ordering.API/appsettings.Development.json; then \
+        sed -i 's|Host=localhost;Database=OrderingDB;Username=postgres;Password=yourWeak(!)Password|Host=orderingdb;Database=OrderingDB;Username=postgres;Password=yourWeak(!)Password|g' src/Ordering.API/appsettings.Development.json; \
+    fi; \
+    if grep -q 'ASPNETCORE_ENVIRONMENT' src/Ordering.API/Properties/launchSettings.json; then \
+        sed -i 's|"ASPNETCORE_ENVIRONMENT": "Development"|"ASPNETCORE_ENVIRONMENT": "Production"|g' src/Ordering.API/Properties/launchSettings.json; \
+    fi; \
+    if grep -q 'UseNpgsql(builder.Configuration.GetConnectionString("orderingdb"))' src/Ordering.API/Extensions/Extensions.cs; then \
+        sed -i 's|UseNpgsql(builder.Configuration.GetConnectionString("orderingdb"))|UseNpgsql(builder.Configuration.GetConnectionString("orderingdb") ?? builder.Configuration.GetConnectionString("OrderingDB") ?? builder.Configuration["ConnectionStrings:orderingdb"] ?? builder.Configuration["ConnectionStrings:OrderingDB"])|g' src/Ordering.API/Extensions/Extensions.cs; \
+    fi
+
+# Build and publish in production mode
+RUN dotnet publish src/Ordering.API/Ordering.API.csproj \
+    -c Release \
+    -o /app/publish \
+    /p:UseAppHost=false \
+    /p:GenerateDocumentationFile=false
+
+FROM mcr.microsoft.com/dotnet/nightly/aspnet:10.0.0-rc.1 AS runtime
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        libicu74 \
+        libkrb5-3 \
+        tzdata \
+        zlib1g \
+    && update-ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV \
+    ASPNETCORE_ENVIRONMENT=Production \
+    DOTNET_ENVIRONMENT=Production \
+    ASPNETCORE_URLS=http://+:8080 \
+    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+
+COPY --from=build /app/publish .
+
+EXPOSE 8080
+
+CMD ["dotnet", "Ordering.API.dll"]
