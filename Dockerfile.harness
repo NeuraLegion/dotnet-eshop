@@ -1,0 +1,24 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+WORKDIR /app
+
+# Install Node.js and npm for the harness runtime.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends nodejs npm \
+  && rm -rf /var/lib/apt/lists/*
+
+# Install the harness dependency locally under /app so Node can resolve it.
+COPY harness.js /app/harness.js
+RUN npm init -y \
+  && npm install express
+
+# Copy full source tree for the C# project referenced by the harness.
+COPY . /app
+
+ENV PORT=3001
+
+EXPOSE 3001
+
+CMD ["node", "harness.js"]
