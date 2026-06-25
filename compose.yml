@@ -1,0 +1,82 @@
+services:
+  webhooks.api:
+    build:
+      context: .
+      dockerfile: Dockerfile.bright
+    image: webhooks.api:latest
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      DOTNET_ENVIRONMENT: Production
+      ConnectionStrings__WebHooksDB: Host=webhooksdb;Database=WebHooksDB;Username=postgres;Password=yourWeak(!)Password
+      ConnectionStrings__EventBus: amqp://guest:guest@eventbus:5672/
+      ConnectionStrings__webhooksdb: Host=webhooksdb;Database=WebHooksDB;Username=postgres;Password=yourWeak(!)Password
+      ConnectionStrings__eventbus: amqp://guest:guest@eventbus:5672/
+      OpenApi__Endpoint__Name: Webhooks.API V1
+      OpenApi__Document__Description: The Webhooks Microservice HTTP API. This is a simple webhooks CRUD registration entrypoint
+      OpenApi__Document__Title: eShop - Webhooks HTTP API
+      OpenApi__Document__Version: v1
+      OpenApi__Auth__ClientId: webhooksswaggerui
+      OpenApi__Auth__AppName: WebHooks Service Swagger UI
+      EventBus__SubscriptionClientName: Webhooks
+      Identity__Url: http://identity:5223
+      Identity__Audience: webhooks
+      Identity__Scopes__webhooks: Webhooks API
+      AllowedHosts: "*"
+      webhooksdb:
+        condition: service_healthy
+    stdin_open: true
+    tty: true
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/openapi/v1.json >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+
+  webhooksdb:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: yourWeak(!)Password
+      POSTGRES_DB: WebHooksDB
+      PGDATA: /var/lib/postgresql/data
+    volumes:
+      - webhooksdb-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  identity:
+    build:
+      context: .
+      dockerfile: Dockerfile.identity
+    image: identity.api:latest
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      DOTNET_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__identitydb: Host=webhooksdb;Database=IdentityDb;Username=postgres;Password=yourWeak(!)Password
+      ConnectionStrings__IdentityDb: Host=webhooksdb;Database=IdentityDb;Username=postgres;Password=yourWeak(!)Password
+    ports:
+      - "5223:8080"
+      webhooksdb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/.well-known/openid-configuration >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+    restart: unless-stopped
+
+volumes:
+  webhooksdb-data:
